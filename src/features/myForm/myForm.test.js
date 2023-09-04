@@ -8,6 +8,29 @@ jest.mock('axios');
 describe('MyFormComponent', () => {
 	let formData;
 
+	const fireEvents = (name, email, agreement, gender) => {
+		fireEvent.change(screen.getByPlaceholderText('Name'), {
+			target: { value: name },
+		});
+		fireEvent.change(screen.getByPlaceholderText('Email'), {
+			target: { value: email },
+		});
+
+		if (agreement) fireEvent.click(screen.getByLabelText('Agree to Terms'));
+		switch (gender) {
+			case 'male':
+				fireEvent.click(screen.getByLabelText('Male'));
+				break;
+			case 'female':
+				fireEvent.click(screen.getByLabelText('Female'));
+				break;
+			default:
+				break;
+		}
+
+		fireEvent.click(screen.getByText('Submit'));
+	};
+
 	beforeEach(() => {
 		// Common test data for form fields
 		formData = {
@@ -33,23 +56,15 @@ describe('MyFormComponent', () => {
 
 		it('submits the form with a name of any length', async () => {
 			render(<MyFormComponent />);
-			fireEvent.change(screen.getByPlaceholderText('Name'), {
-				target: { value: formData.name.repeat(10) },
-			});
-			fireEvent.change(screen.getByPlaceholderText('Email'), {
-				target: { value: formData.email },
-			});
-			fireEvent.click(screen.getByLabelText('Agree to Terms'));
-			fireEvent.click(screen.getByLabelText('Male'));
-
-			fireEvent.click(screen.getByText('Submit'));
+			let longName = formData.name.repeat(10);
+			fireEvents(longName, formData.email, true, 'male');
 
 			await waitFor(() => {
 				expect(axios.post).toHaveBeenCalledWith(
-					'https://jsonplaceholder.typicode.com/posts',
+					`${BASE_URL}/posts`,
 					expect.objectContaining({
 						...formData,
-						name: formData.name.repeat(10),
+						name: longName,
 					}),
 				);
 			});
@@ -57,19 +72,11 @@ describe('MyFormComponent', () => {
 
 		it('submits the form with changed gender', async () => {
 			render(<MyFormComponent />);
-			fireEvent.change(screen.getByPlaceholderText('Name'), {
-				target: { value: formData.name },
-			});
-			fireEvent.change(screen.getByPlaceholderText('Email'), {
-				target: { value: formData.email },
-			});
-			fireEvent.click(screen.getByLabelText('Agree to Terms'));
-			fireEvent.click(screen.getByLabelText('Female'));
-			fireEvent.click(screen.getByText('Submit'));
+			fireEvents(formData.name, formData.email, true, 'female');
 
 			await waitFor(() => {
 				expect(axios.post).toHaveBeenCalledWith(
-					'https://jsonplaceholder.typicode.com/posts',
+					`${BASE_URL}/posts`,
 					expect.objectContaining({
 						...formData,
 						gender: 'female',
@@ -80,22 +87,15 @@ describe('MyFormComponent', () => {
 
 		it('submits the form with a complex email', async () => {
 			render(<MyFormComponent />);
-			fireEvent.change(screen.getByPlaceholderText('Name'), {
-				target: { value: formData.name },
-			});
-			fireEvent.change(screen.getByPlaceholderText('Email'), {
-				target: { value: 'test.name+alias@example.co.uk' },
-			});
-			fireEvent.click(screen.getByLabelText('Agree to Terms'));
-			fireEvent.click(screen.getByLabelText('Male'));
-			fireEvent.click(screen.getByText('Submit'));
+			let complexEmail = 'test.name+alias@example.co.uk';
+			fireEvents(formData.name, complexEmail, true, 'male');
 
 			await waitFor(() => {
 				expect(axios.post).toHaveBeenCalledWith(
-					'https://jsonplaceholder.typicode.com/posts',
+					`${BASE_URL}/posts`,
 					expect.objectContaining({
 						...formData,
-						email: 'test.name+alias@example.co.uk',
+						email: complexEmail,
 					}),
 				);
 			});
@@ -103,20 +103,11 @@ describe('MyFormComponent', () => {
 
 		it('resubmits the form after an initial successful submission', async () => {
 			render(<MyFormComponent />);
-			fireEvent.change(screen.getByPlaceholderText('Name'), {
-				target: { value: formData.name },
-			});
-			fireEvent.change(screen.getByPlaceholderText('Email'), {
-				target: { value: formData.email },
-			});
-			fireEvent.click(screen.getByLabelText('Agree to Terms'));
-			fireEvent.click(screen.getByLabelText('Male'));
-
-			fireEvent.click(screen.getByText('Submit'));
+			fireEvents(formData.name, formData.email, true, 'male');
 
 			await waitFor(() => {
 				expect(axios.post).toHaveBeenCalledWith(
-					'https://jsonplaceholder.typicode.com/posts',
+					`${BASE_URL}/posts`,
 					expect.objectContaining({
 						...formData,
 					}),
@@ -134,15 +125,7 @@ describe('MyFormComponent', () => {
 	describe('Negative Test Cases', () => {
 		it('displays error message when submitting without a name', async () => {
 			render(<MyFormComponent />);
-			fireEvent.change(screen.getByPlaceholderText('Name'), {
-				target: { value: '' },
-			});
-			fireEvent.change(screen.getByPlaceholderText('Email'), {
-				target: { value: formData.email },
-			});
-			fireEvent.click(screen.getByLabelText('Agree to Terms'));
-			fireEvent.click(screen.getByLabelText('Male'));
-			fireEvent.click(screen.getByText('Submit'));
+			fireEvents('', formData.email, true, 'male');
 
 			await waitFor(() => {
 				expect(axios.post).not.toBeCalled();
@@ -153,17 +136,11 @@ describe('MyFormComponent', () => {
 				).toBeInTheDocument();
 			});
 		});
+
 		it('displays error message when submitting with an invalid email address', async () => {
 			render(<MyFormComponent />);
-			fireEvent.change(screen.getByPlaceholderText('Name'), {
-				target: { value: formData.name },
-			});
-			fireEvent.change(screen.getByPlaceholderText('Email'), {
-				target: { value: 'test.name+aliasexample.co.uk' },
-			});
-			fireEvent.click(screen.getByLabelText('Agree to Terms'));
-			fireEvent.click(screen.getByLabelText('Male'));
-			fireEvent.click(screen.getByText('Submit'));
+			let invalidEmail = 'test.name+aliasexample.co.uk';
+			fireEvents(formData.name, invalidEmail, true, 'male');
 
 			await waitFor(() => {
 				expect(axios.post).not.toBeCalled();
@@ -174,16 +151,10 @@ describe('MyFormComponent', () => {
 				).toBeInTheDocument();
 			});
 		});
+
 		it('displays error message when submitting without checking the "Agree to Terms" checkbox', async () => {
 			render(<MyFormComponent />);
-			fireEvent.change(screen.getByPlaceholderText('Name'), {
-				target: { value: formData.name },
-			});
-			fireEvent.change(screen.getByPlaceholderText('Email'), {
-				target: { value: formData.email },
-			});
-			fireEvent.click(screen.getByLabelText('Male'));
-			fireEvent.click(screen.getByText('Submit'));
+			fireEvents(formData.name, formData.email, false, 'male');
 
 			await waitFor(() => {
 				expect(axios.post).not.toBeCalled();
@@ -194,16 +165,10 @@ describe('MyFormComponent', () => {
 				).toBeInTheDocument();
 			});
 		});
+
 		it('displays error message when submitting without selecting a gender', async () => {
 			render(<MyFormComponent />);
-			fireEvent.change(screen.getByPlaceholderText('Name'), {
-				target: { value: formData.name },
-			});
-			fireEvent.change(screen.getByPlaceholderText('Email'), {
-				target: { value: formData.email },
-			});
-			fireEvent.click(screen.getByLabelText('Agree to Terms'));
-			fireEvent.click(screen.getByText('Submit'));
+			fireEvents(formData.name, formData.email, true, '');
 
 			await waitFor(() => {
 				expect(axios.post).not.toBeCalled();
@@ -214,18 +179,10 @@ describe('MyFormComponent', () => {
 				).toBeInTheDocument();
 			});
 		});
+
 		it('displays error message when submitting with a short name', async () => {
 			render(<MyFormComponent />);
-			fireEvent.change(screen.getByPlaceholderText('Name'), {
-				target: { value: 'Jo' },
-			});
-			fireEvent.change(screen.getByPlaceholderText('Email'), {
-				target: { value: formData.email },
-			});
-			fireEvent.click(screen.getByLabelText('Agree to Terms'));
-			fireEvent.click(screen.getByLabelText('Male'));
-
-			fireEvent.click(screen.getByText('Submit'));
+			fireEvents('Jo', formData.email, true, 'male');
 
 			await waitFor(() => {
 				expect(axios.post).not.toBeCalled();
