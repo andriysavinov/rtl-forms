@@ -31,11 +31,11 @@ function MyFormComponent() {
 		// Validate if any required fields are empty
 		const newErrors = {};
 
-		if (!form.name || form.name.length < 3) {
+		if (form.name?.length < 3) {
 			newErrors.name = 'Name must be at least 3 characters.';
 		}
 
-		if (!form.email || !form.email.includes('@')) {
+		if (!form.email?.includes('@')) {
 			newErrors.email = 'Email must be valid.';
 		}
 
